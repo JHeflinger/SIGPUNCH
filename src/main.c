@@ -75,7 +75,7 @@ PeerPacket find_peer(ConnectPacket conp) {
 		}
 		curr = (Peer*)curr->next;
 	}
-	printf("Peer ID#%" PRIx64 "%" PRIx64 " was requested but not registered\n", curr->id.first, curr->id.second);
+	printf("Peer ID#%" PRIx64 "%" PRIx64 " was requested but not registered\n", conp.to.first, conp.to.second);
 	return p;
 }
 
