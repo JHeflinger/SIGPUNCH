@@ -11,6 +11,15 @@
 
 #define uuideq(u1, u2) (u1.first == u2.first && u1.second == u2.second)
 
+typedef struct {
+	uint8_t address[4];
+} Ipv4;
+
+typedef struct {
+	Ipv4 address;
+	uint16_t port;
+} Destination;
+
 typedef enum {
 	MESSAGE_PACKET = 0,
 	REGISTER_PACKET = 1,
@@ -32,7 +41,6 @@ typedef struct {
 
 typedef struct {
 	Header type;
-	UUID from;
 	UUID to;
 } ConnectPacket;
 
@@ -42,13 +50,9 @@ typedef struct {
 } AckPacket;
 
 typedef struct {
-	uint8_t address[4];
-} Ipv4;
-
-typedef struct {
-	Ipv4 address;
-	uint16_t port;
-} Destination;
+	Header type;
+	Destination destination;
+} PeerPacket;
 
 typedef struct {
 	UUID id;
@@ -58,6 +62,20 @@ typedef struct {
 
 Peer* g_peers = NULL;
 size_t g_num_peers = 0;
+
+PeerPacket find_peer(ConnectPacket conp) {
+	PeerPacket p = { 0 };
+	p.type = PEER_PACKET;
+	Peer* curr = g_peers;
+	while (curr) {
+		if (uuideq(conp->to, curr->id)) {
+			p.destination = curr->destination;
+			return p;
+		}
+		curr = (Peer*)curr->next;
+	}
+	return p;
+}
 
 void register_peer(struct sockaddr_in addr, UUID id) {
 	Peer* curr = g_peers;
@@ -77,7 +95,7 @@ void register_peer(struct sockaddr_in addr, UUID id) {
 	new->next = g_peers;
 	g_peers = new;
 	g_num_peers++;
-	printf("Added new peer#%d with ID#%" PRIx64 "%" PRIx64 " on address %s:%d\n", g_num_peers, id.first, id.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+	printf("Added new peer#%d with ID#%" PRIx64 "%" PRIx64 " on address %s:%d\n", (int)g_num_peers, id.first, id.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 }
 
 int main(int argc, const char** argv) {
@@ -125,6 +143,8 @@ int main(int argc, const char** argv) {
 		buffer[recieved] = '\0';
 		Header packtype;
 		RegisterPacket regp;
+		ConnectPacket conp;
+		PeerPacket peep;
 		AckPacket ack = { 0 };
 		ack.type = ACK_PACKET;
 		memcpy(&packtype, buffer, sizeof(Header));
@@ -134,11 +154,16 @@ int main(int argc, const char** argv) {
 				register_peer(client_addr, regp.peer);
 				ack.id.first = 0;
 				ack.id.second = 0;
-				memcpy(buffer, &ack, sizeof(Header));
-				buffer[sizeof(Header)] = '\0';
-				sendto(server_socket, buffer, sizeof(Header), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
+				memcpy(buffer, &ack, sizeof(AckPacket));
+				buffer[sizeof(AckPacket)] = '\0';
+				sendto(server_socket, buffer, sizeof(AckPacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
 				break;
 			case CONNECT_PACKET:
+				memcpy(&conp, buffer, sizeof(ConnectPacket));
+				peep = find_peer(conp);
+				memcpy(buffer, &peep, sizeof(PeerPacket));
+				buffer[sizeof(PeerPacket)] = '\0';
+				sendto(server_socket, buffer, sizeof(PeerPacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
 				break;
 			default: break;
 		}
