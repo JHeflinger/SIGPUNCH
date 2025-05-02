@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 #define SERVER_PORT 9876
 #define MAX_PACKET_SIZE 4096
@@ -64,6 +65,7 @@ void register_peer(struct sockaddr_in addr, UUID id) {
 		if (uuideq(id, curr->id)) {
 			memcpy(curr->destination.address.address, &addr.sin_addr.s_addr, 4);
 			curr->destination.port = ntohs(addr.sin_port);
+			printf("Updated peer ID#%" PRIx64 "%" PRIx64 " to address %s:%d\n", id.first, id.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 			return;
 		}
 		curr = (Peer*)curr->next;
@@ -75,6 +77,7 @@ void register_peer(struct sockaddr_in addr, UUID id) {
 	new->next = g_peers;
 	g_peers = new;
 	g_num_peers++;
+	printf("Added new peer#%d with ID#%" PRIx64 "%" PRIx64 " on address %s:%d\n", g_num_peers, id.first, id.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 }
 
 int main(int argc, const char** argv) {
@@ -89,7 +92,6 @@ int main(int argc, const char** argv) {
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(SERVER_PORT);
-	//inet_pton(AF_INET, "0.0.0.0", &server_addr.sin_addr);
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 	if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
 		printf("Bind failed...\n");
@@ -129,13 +131,14 @@ int main(int argc, const char** argv) {
 		switch (packtype) {
 			case REGISTER_PACKET:
 				memcpy(&regp, buffer, sizeof(RegisterPacket));
-				printf("Registering peer #%d - %s:%d\n", (int)g_num_peers, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 				register_peer(client_addr, regp.peer);
 				ack.id.first = 0;
 				ack.id.second = 0;
 				memcpy(buffer, &ack, sizeof(Header));
 				buffer[sizeof(Header)] = '\0';
 				sendto(server_socket, buffer, sizeof(Header), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
+				break;
+			case CONNECT_PACKET:
 				break;
 			default: break;
 		}
