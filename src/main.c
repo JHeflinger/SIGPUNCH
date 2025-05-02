@@ -62,7 +62,7 @@ void register_peer(struct sockaddr_in addr, UUID id) {
 	Peer* curr = g_peers;
 	while (curr) {
 		if (uuideq(id, curr->id)) {
-			memcpy(curr->destination.address.address, addr.sin_addr.s_addr, 4);
+			memcpy(curr->destination.address.address, &addr.sin_addr.s_addr, 4);
 			curr->destination.port = ntohs(addr.sin_port);
 			return;
 		}
@@ -70,7 +70,7 @@ void register_peer(struct sockaddr_in addr, UUID id) {
 	}
 	Peer* new = calloc(1, sizeof(Peer));
 	new->id = id;
-	memcpy(new->destination.address.address, addr.sin_addr.s_addr, 4);
+	memcpy(new->destination.address.address, &addr.sin_addr.s_addr, 4);
 	new->destination.port = ntohs(addr.sin_port);
 	new->next = g_peers;
 	g_peers = new;
@@ -122,12 +122,12 @@ int main(int argc, const char** argv) {
 		}
 		buffer[recieved] = '\0';
 		Header packtype;
+		RegisterPacket regp;
 		AckPacket ack = { 0 };
 		ack.type = ACK_PACKET;
 		memcpy(&packtype, buffer, sizeof(Header));
 		switch (packtype) {
 			case REGISTER_PACKET:
-				RegisterPacket regp;
 				memcpy(&regp, buffer, sizeof(RegisterPacket));
 				printf("Registering peer #%d - %s:%d\n", (int)g_num_peers, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 				register_peer(client_addr, regp.peer);
