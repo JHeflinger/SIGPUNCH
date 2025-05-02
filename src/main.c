@@ -27,12 +27,23 @@ typedef enum {
 	ACK_PACKET = 3,
 	PEER_PACKET = 4,
 	FAILURE_PACKET = 5,
+	PUNCH_PACKET = 6,
+	FIST_PACKET = 7,
 } Header;
 
 typedef struct {
 	uint64_t first;
 	uint64_t second;
 } UUID;
+
+typedef struct {
+	Header type;
+} FistPacket;
+
+typedef struct {
+	Header type;
+	Destination destination;
+} PunchPacket;
 
 typedef struct {
 	Header type;
@@ -77,6 +88,21 @@ PeerPacket find_peer(ConnectPacket conp) {
 	}
 	printf("Peer ID#%" PRIx64 "%" PRIx64 " was requested but not registered\n", conp.to.first, conp.to.second);
 	return p;
+}
+
+PunchPacket get_punch(struct sockaddr_in peer_addr) {
+	PunchPacket p = { 0 };
+	p.destination.port = ntohs(peer_addr.sin_port);
+	memcpy(p.destination.address.address, &peer_addr.sin_addr.s_addr, 4);
+	return p;
+}
+
+struct sockaddr_in get_sock_addr(Destination destination) {
+	struct sockaddr_in sin;
+	memset(&sin, 0, sizeof(sin));
+	memcpy(&sin.sin_addr.s_addr, destination.address.address, 4);
+	sin.sin_port = htons(destination.port);
+	return sin;
 }
 
 void register_peer(struct sockaddr_in addr, UUID id) {
@@ -147,8 +173,10 @@ int main(int argc, const char** argv) {
 		RegisterPacket regp;
 		ConnectPacket conp;
 		PeerPacket peep;
+		PunchPacket punp;
 		AckPacket ack = { 0 };
 		ack.type = ACK_PACKET;
+		punp.type = PUNCH_PACKET;
 		memcpy(&packtype, buffer, sizeof(Header));
 		switch (packtype) {
 			case REGISTER_PACKET:
@@ -163,6 +191,11 @@ int main(int argc, const char** argv) {
 			case CONNECT_PACKET:
 				memcpy(&conp, buffer, sizeof(ConnectPacket));
 				peep = find_peer(conp);
+				punp = get_punch(client_addr);
+				struct sockaddr_in punch_addr = get_sock_addr(peep.destination);
+				memcpy(buffer, &punp, sizeof(PunchPacket));
+				buffer[sizeof(PunchPacket)] = '\0';
+				sendto(server_socket, buffer, sizeof(PunchPacket), 0, (struct sockaddr*)&punch_addr, sizeof(punch_addr));
 				memcpy(buffer, &peep, sizeof(PeerPacket));
 				buffer[sizeof(PeerPacket)] = '\0';
 				sendto(server_socket, buffer, sizeof(PeerPacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
