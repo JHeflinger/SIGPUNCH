@@ -68,7 +68,7 @@ PeerPacket find_peer(ConnectPacket conp) {
 	p.type = PEER_PACKET;
 	Peer* curr = g_peers;
 	while (curr) {
-		if (uuideq(conp->to, curr->id)) {
+		if (uuideq(conp.to, curr->id)) {
 			p.destination = curr->destination;
 			return p;
 		}
