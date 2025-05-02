@@ -8,6 +8,8 @@
 #define SERVER_PORT 9876
 #define MAX_PACKET_SIZE 4096
 
+#define uuideq(u1, u2) (u1.first == u2.first && u1.second == u2.second)
+
 typedef enum {
 	MESSAGE_PACKET = 0,
 	REGISTER_PACKET = 1,
@@ -37,6 +39,43 @@ typedef struct {
 	Header type;
 	UUID id;
 } AckPacket;
+
+typedef struct {
+	uint8_t address[4];
+} Ipv4;
+
+typedef struct {
+	Ipv4 address;
+	uint16_t port;
+} Destination;
+
+typedef struct {
+	UUID id;
+	Destination destination;
+	void* next;
+} Peer;
+
+Peer* g_peers = NULL;
+size_t g_num_peers = 0;
+
+void register_peer(struct sockaddr_in addr, UUID id) {
+	Peer* curr = g_peers;
+	while (curr) {
+		if (uuideq(id, curr->id)) {
+			memcpy(curr->destination.address.address, addr.sin_addr.s_addr, 4);
+			curr->destination.port = ntohs(addr.sin_port);
+			return;
+		}
+		curr = (Peer*)curr->next;
+	}
+	Peer* new = calloc(1, sizeof(Peer));
+	new->id = id;
+	memcpy(new->destination.address.address, addr.sin_addr.s_addr, 4);
+	new->destination.port = ntohs(addr.sin_port);
+	new->next = g_peers;
+	g_peers = new;
+	g_num_peers++;
+}
 
 int main(int argc, const char** argv) {
 	// setup
@@ -88,7 +127,10 @@ int main(int argc, const char** argv) {
 		memcpy(&packtype, buffer, sizeof(Header));
 		switch (packtype) {
 			case REGISTER_PACKET:
-				printf("Registering peer %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+				RegisterPacket regp;
+				memcpy(&regp, buffer, sizeof(RegisterPacket));
+				printf("Registering peer #%d - %s:%d\n", (int)g_num_peers, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+				register_peer(client_addr, regp.peer);
 				ack.id.first = 0;
 				ack.id.second = 0;
 				memcpy(buffer, &ack, sizeof(Header));
