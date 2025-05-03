@@ -200,7 +200,7 @@ int main(int argc, const char** argv) {
 		RegisterPacket regp;
 		ConnectPacket conp;
 		PeerPacket peep;
-		PunchPacket punp;
+		//PunchPacket punp;
 		AckPacket ack = { 0 };
 		Message msg = { 0 };
 		ack.type = ACK_PACKET;
@@ -240,6 +240,7 @@ int main(int argc, const char** argv) {
 				} else {
 					printf("Unable to forward message to ID#%" PRIx64 "%" PRIx64 "\n", msg.to.first, msg.to.second);
 				}
+				break;
 			case ACK_PACKET:
 				printf("TODO");
 				break;
