@@ -220,7 +220,7 @@ int main(int argc, const char** argv) {
 			case REGISTER_PACKET:
 				memcpy(&regp, buffer, sizeof(RegisterPacket));
 				Peer* peer = register_peer(client_addr, regp);
-				trap.translation = peer.destination;
+				trap.translation = peer->destination;
 				memcpy(buffer, &trap, sizeof(TranslatePacket));
 				buffer[sizeof(TranslatePacket)] = '\0';
 				sendto(server_socket, buffer, sizeof(TranslatePacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
