@@ -150,9 +150,6 @@ void register_peer(struct sockaddr_in addr, UUID id) {
 
 int main(int argc, const char** argv) {
 	// setup
-	Destination server_destination = { 0 };
-	server_destination.address = (Ipv4){{170, 9, 247, 131}};
-	server_destination.port = SERVER_PORT;
 	int server_socket = socket(AF_INET, SOCK_DGRAM, 0);
 	if (server_socket < 0) {
 		printf("Socket failed...\n");
@@ -222,8 +219,6 @@ int main(int argc, const char** argv) {
 			case CONNECT_PACKET:
 				memcpy(&conp, buffer, sizeof(ConnectPacket));
 				peep = find_peer(conp.to);
-				// if (peep.destination.port != 0)
-				// 	peep.destination = server_destination;
 				punp = get_punch(client_addr);
 				struct sockaddr_in punch_addr = get_sock_addr(peep.destination);
 				memcpy(buffer, &punp, sizeof(PunchPacket));
@@ -235,16 +230,7 @@ int main(int argc, const char** argv) {
 				sendto(server_socket, buffer, sizeof(PeerPacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
 				break;
 			case MESSAGE_PACKET:
-				memset(&msg, 0, sizeof(Message));
-				memcpy(&msg, buffer, sizeof(Message));
-				peep = find_peer(msg.to);
-				if (peep.destination.port != 0) {
-					struct sockaddr_in forward_addr = get_sock_addr(peep.destination);
-					sendto(server_socket, buffer, sizeof(Message), 0, (struct sockaddr*)&forward_addr, sizeof(forward_addr));
-					printf("Forwarded message to ID#%" PRIx64 "%" PRIx64 "\n", msg.to.first, msg.to.second);
-				} else {
-					printf("Unable to forward message to ID#%" PRIx64 "%" PRIx64 "\n", msg.to.first, msg.to.second);
-				}
+				printf("TODO");
 				break;
 			case ACK_PACKET:
 				printf("TODO");
