@@ -173,6 +173,11 @@ int main(int argc, const char** argv) {
 		printf("Unable to set server socket options\n");
 		exit(1);
 	}
+	optval = IP_PMTUDISC_DO;
+    if (setsockopt(server_socket, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(optval)) < 0) {
+		printf("Unable to set server socket options\n");
+		exit(1);
+    }
 	struct sockaddr_in server_addr;
 	char buffer[MAX_PACKET_SIZE] = { 0 };
 	memset(&server_addr, 0, sizeof(server_addr));
