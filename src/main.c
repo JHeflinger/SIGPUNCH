@@ -30,6 +30,7 @@ typedef enum {
 	FAILURE_PACKET = 5,
 	PUNCH_PACKET = 6,
 	FIST_PACKET = 7,
+	TRANSLATE_PACKET = 8,
 } Header;
 
 typedef struct {
@@ -51,6 +52,11 @@ typedef struct {
 	UUID peer;
 	Destination private_dest;
 } RegisterPacket;
+
+typedef struct {
+	Header type;
+	Destination translation;
+} TranslatePacket;
 
 typedef struct {
 	Header type;
@@ -129,7 +135,7 @@ struct sockaddr_in get_sock_addr(Destination destination) {
 	return sin;
 }
 
-void register_peer(struct sockaddr_in addr, RegisterPacket regp) {
+Peer* register_peer(struct sockaddr_in addr, RegisterPacket regp) {
 	Peer* curr = g_peers;
 	while (curr) {
 		if (uuideq(regp.peer, curr->id)) {
@@ -137,7 +143,7 @@ void register_peer(struct sockaddr_in addr, RegisterPacket regp) {
 			curr->destination.port = ntohs(addr.sin_port);
 			curr->private_dest = regp.private_dest;
 			printf("Updated peer ID#%" PRIx64 "%" PRIx64 " to address %s:%d\n", regp.peer.first, regp.peer.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-			return;
+			return curr;
 		}
 		curr = (Peer*)curr->next;
 	}
@@ -150,6 +156,7 @@ void register_peer(struct sockaddr_in addr, RegisterPacket regp) {
 	g_peers = new;
 	g_num_peers++;
 	printf("Added new peer#%d with ID#%" PRIx64 "%" PRIx64 " on address %s:%d\n", (int)g_num_peers, regp.peer.first, regp.peer.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+	return new;
 }
 
 int main(int argc, const char** argv) {
@@ -205,20 +212,18 @@ int main(int argc, const char** argv) {
 		ConnectPacket conp;
 		PeerPacket peep;
 		PunchPacket punp;
-		AckPacket ack = { 0 };
-		Message msg = { 0 };
-		ack.type = ACK_PACKET;
+		TranslatePacket trap = { 0 };
+		trap.type = TRANSLATE_PACKET;
 		punp.type = PUNCH_PACKET;
 		memcpy(&packtype, buffer, sizeof(Header));
 		switch (packtype) {
 			case REGISTER_PACKET:
 				memcpy(&regp, buffer, sizeof(RegisterPacket));
-				register_peer(client_addr, regp);
-				ack.id.first = 0;
-				ack.id.second = 0;
-				memcpy(buffer, &ack, sizeof(AckPacket));
-				buffer[sizeof(AckPacket)] = '\0';
-				sendto(server_socket, buffer, sizeof(AckPacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
+				Peer* peer = register_peer(client_addr, regp);
+				trap.translation = peer.destination;
+				memcpy(buffer, &trap, sizeof(TranslatePacket));
+				buffer[sizeof(TranslatePacket)] = '\0';
+				sendto(server_socket, buffer, sizeof(TranslatePacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
 				break;
 			case CONNECT_PACKET:
 				memcpy(&conp, buffer, sizeof(ConnectPacket));
