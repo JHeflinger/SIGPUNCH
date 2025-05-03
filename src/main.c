@@ -150,6 +150,9 @@ void register_peer(struct sockaddr_in addr, UUID id) {
 
 int main(int argc, const char** argv) {
 	// setup
+	Destination server_destination = { 0 };
+	server_destination.address = (Ipv4){{170, 9, 247, 131}};
+	server_destination.port = SERVER_PORT;
 	int server_socket = socket(AF_INET, SOCK_DGRAM, 0);
 	if (server_socket < 0) {
 		printf("Socket failed...\n");
@@ -204,7 +207,7 @@ int main(int argc, const char** argv) {
 		AckPacket ack = { 0 };
 		Message msg = { 0 };
 		ack.type = ACK_PACKET;
-		punp.type = PUNCH_PACKET;
+		//punp.type = PUNCH_PACKET;
 		memcpy(&packtype, buffer, sizeof(Header));
 		switch (packtype) {
 			case REGISTER_PACKET:
@@ -219,6 +222,8 @@ int main(int argc, const char** argv) {
 			case CONNECT_PACKET:
 				memcpy(&conp, buffer, sizeof(ConnectPacket));
 				peep = find_peer(conp.to);
+				if (peep.destination.port != 0)
+					peep.destination = server_destination;
 				//punp = get_punch(client_addr);
 				//struct sockaddr_in punch_addr = get_sock_addr(peep.destination);
 				//memcpy(buffer, &punp, sizeof(PunchPacket));
