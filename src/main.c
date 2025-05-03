@@ -8,7 +8,7 @@
 
 #define SERVER_PORT 9876
 #define MAX_PACKET_SIZE 4096
-#define MAX_MESSAGE_SIZE 1024
+#define MAX_MESSAGE_SIZE 512
 
 #define uuideq(u1, u2) (u1.first == u2.first && u1.second == u2.second)
 
