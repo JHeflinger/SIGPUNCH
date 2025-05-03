@@ -134,6 +134,11 @@ int main(int argc, const char** argv) {
 		printf("Socket failed...\n");
 		exit(1);
 	}
+	int optval = 1;
+	if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+		printf("Unable to set server socket options\n");
+		exit(1);
+	}
 	struct sockaddr_in server_addr;
 	char buffer[MAX_PACKET_SIZE] = { 0 };
 	memset(&server_addr, 0, sizeof(server_addr));
