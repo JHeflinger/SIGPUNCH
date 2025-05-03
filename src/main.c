@@ -73,6 +73,16 @@ typedef struct {
 } Peer;
 
 typedef struct {
+    uint8_t year;
+    uint8_t month;
+    uint8_t day;
+    uint8_t hour;
+    uint8_t minute;
+    uint8_t second;
+    uint8_t zone;
+} Timestamp;
+
+typedef struct {
     Header type;
     UUID from;
     UUID to;
