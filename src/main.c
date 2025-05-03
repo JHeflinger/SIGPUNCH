@@ -71,6 +71,7 @@ typedef struct {
 typedef struct {
 	Header type;
 	Destination destination;
+	Destination private_dest;
 } PeerPacket;
 
 typedef struct {
@@ -110,6 +111,7 @@ PeerPacket find_peer(UUID id) {
 	while (curr) {
 		if (uuideq(id, curr->id)) {
 			p.destination = curr->destination;
+			p.private_dest = curr->private_dest;
 			printf("Found peer ID#%" PRIx64 "%" PRIx64 "\n", curr->id.first, curr->id.second);
 			return p;
 		}
