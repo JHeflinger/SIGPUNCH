@@ -81,12 +81,12 @@ PeerPacket find_peer(ConnectPacket conp) {
 	while (curr) {
 		if (uuideq(conp.to, curr->id)) {
 			p.destination = curr->destination;
-			printf("Peer ID#%" PRIx64 "%" PRIx64 " address was requested and found\n", curr->id.first, curr->id.second);
+			printf("Found peer ID#%" PRIx64 "%" PRIx64 "\n", curr->id.first, curr->id.second);
 			return p;
 		}
 		curr = (Peer*)curr->next;
 	}
-	printf("Peer ID#%" PRIx64 "%" PRIx64 " was requested but not registered\n", conp.to.first, conp.to.second);
+	printf("UNKNOWN Peer ID#%" PRIx64 "%" PRIx64 " was requested\n", conp.to.first, conp.to.second);
 	return p;
 }
 
@@ -197,6 +197,7 @@ int main(int argc, const char** argv) {
 				memcpy(buffer, &punp, sizeof(PunchPacket));
 				buffer[sizeof(PunchPacket)] = '\0';
 				sendto(server_socket, buffer, sizeof(PunchPacket), 0, (struct sockaddr*)&punch_addr, sizeof(punch_addr));
+				printf("Sent a punch command to %s:%d\n", inet_ntoa(punch_addr.sin_addr), ntohs(punch_addr.sin_port));
 				memcpy(buffer, &peep, sizeof(PeerPacket));
 				buffer[sizeof(PeerPacket)] = '\0';
 				sendto(server_socket, buffer, sizeof(PeerPacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
