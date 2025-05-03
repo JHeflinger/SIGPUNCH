@@ -92,6 +92,7 @@ PeerPacket find_peer(ConnectPacket conp) {
 
 PunchPacket get_punch(struct sockaddr_in peer_addr) {
 	PunchPacket p = { 0 };
+	p.type = PUNCH_PACKET;
 	p.destination.port = ntohs(peer_addr.sin_port);
 	memcpy(p.destination.address.address, &peer_addr.sin_addr.s_addr, 4);
 	return p;
