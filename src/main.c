@@ -49,6 +49,7 @@ typedef struct {
 typedef struct {
 	Header type;
 	UUID peer;
+	Destination private_dest;
 } RegisterPacket;
 
 typedef struct {
@@ -69,6 +70,7 @@ typedef struct {
 typedef struct {
 	UUID id;
 	Destination destination;
+	Destination private_dest;
 	void* next;
 } Peer;
 
@@ -127,25 +129,27 @@ struct sockaddr_in get_sock_addr(Destination destination) {
 	return sin;
 }
 
-void register_peer(struct sockaddr_in addr, UUID id) {
+void register_peer(struct sockaddr_in addr, RegisterPacket regp) {
 	Peer* curr = g_peers;
 	while (curr) {
-		if (uuideq(id, curr->id)) {
+		if (uuideq(regp.peer, curr->id)) {
 			memcpy(curr->destination.address.address, &addr.sin_addr.s_addr, 4);
 			curr->destination.port = ntohs(addr.sin_port);
-			printf("Updated peer ID#%" PRIx64 "%" PRIx64 " to address %s:%d\n", id.first, id.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+			curr->private_dest = regp.private_dest;
+			printf("Updated peer ID#%" PRIx64 "%" PRIx64 " to address %s:%d\n", regp.peer.first, regp.peer.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 			return;
 		}
 		curr = (Peer*)curr->next;
 	}
 	Peer* new = calloc(1, sizeof(Peer));
-	new->id = id;
+	new->id = regp.peer;
 	memcpy(new->destination.address.address, &addr.sin_addr.s_addr, 4);
 	new->destination.port = ntohs(addr.sin_port);
+	new->private_dest = regp.private_dest;
 	new->next = g_peers;
 	g_peers = new;
 	g_num_peers++;
-	printf("Added new peer#%d with ID#%" PRIx64 "%" PRIx64 " on address %s:%d\n", (int)g_num_peers, id.first, id.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+	printf("Added new peer#%d with ID#%" PRIx64 "%" PRIx64 " on address %s:%d\n", (int)g_num_peers, regp.peer.first, regp.peer.second, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 }
 
 int main(int argc, const char** argv) {
@@ -209,7 +213,7 @@ int main(int argc, const char** argv) {
 		switch (packtype) {
 			case REGISTER_PACKET:
 				memcpy(&regp, buffer, sizeof(RegisterPacket));
-				register_peer(client_addr, regp.peer);
+				register_peer(client_addr, regp);
 				ack.id.first = 0;
 				ack.id.second = 0;
 				memcpy(buffer, &ack, sizeof(AckPacket));
