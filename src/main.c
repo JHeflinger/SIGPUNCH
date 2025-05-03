@@ -202,6 +202,7 @@ int main(int argc, const char** argv) {
 		PeerPacket peep;
 		PunchPacket punp;
 		AckPacket ack = { 0 };
+		Message msg = { 0 };
 		ack.type = ACK_PACKET;
 		punp.type = PUNCH_PACKET;
 		memcpy(&packtype, buffer, sizeof(Header));
@@ -229,7 +230,7 @@ int main(int argc, const char** argv) {
 				sendto(server_socket, buffer, sizeof(PeerPacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
 				break;
 			case MESSAGE_PACKET:
-				Message msg = { 0 };
+				memset(&msg, 0, sizeof(Message));
 				memcpy(&msg, buffer, sizeof(Message));
 				peep = find_peer(msg.to);
 				if (peep.destination.port != 0) {
