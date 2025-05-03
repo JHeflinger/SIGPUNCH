@@ -198,7 +198,6 @@ int main(int argc, const char** argv) {
 			printf("ERROR: an abnormally large packet was recieved\n");
 			continue;
 		}
-		printf("got message\n");
 		buffer[recieved] = '\0';
 		Header packtype;
 		RegisterPacket regp;
