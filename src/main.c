@@ -8,6 +8,7 @@
 
 #define SERVER_PORT 9876
 #define MAX_PACKET_SIZE 4096
+#define MAX_MESSAGE_SIZE 2048
 
 #define uuideq(u1, u2) (u1.first == u2.first && u1.second == u2.second)
 
@@ -71,22 +72,32 @@ typedef struct {
 	void* next;
 } Peer;
 
+typedef struct {
+    Header type;
+    UUID from;
+    UUID to;
+    UUID id;
+    Timestamp time;
+    uint16_t size;
+    char text[MAX_MESSAGE_SIZE]; // IMPORTANT: this should be last
+} Message;
+
 Peer* g_peers = NULL;
 size_t g_num_peers = 0;
 
-PeerPacket find_peer(ConnectPacket conp) {
+PeerPacket find_peer(UUID id) {
 	PeerPacket p = { 0 };
 	p.type = PEER_PACKET;
 	Peer* curr = g_peers;
 	while (curr) {
-		if (uuideq(conp.to, curr->id)) {
+		if (uuideq(id, curr->id)) {
 			p.destination = curr->destination;
 			printf("Found peer ID#%" PRIx64 "%" PRIx64 "\n", curr->id.first, curr->id.second);
 			return p;
 		}
 		curr = (Peer*)curr->next;
 	}
-	printf("UNKNOWN Peer ID#%" PRIx64 "%" PRIx64 " was requested\n", conp.to.first, conp.to.second);
+	printf("UNKNOWN Peer ID#%" PRIx64 "%" PRIx64 " was requested\n", id.first, id.second);
 	return p;
 }
 
@@ -196,18 +207,34 @@ int main(int argc, const char** argv) {
 				break;
 			case CONNECT_PACKET:
 				memcpy(&conp, buffer, sizeof(ConnectPacket));
-				peep = find_peer(conp);
-				punp = get_punch(client_addr);
-				struct sockaddr_in punch_addr = get_sock_addr(peep.destination);
-				memcpy(buffer, &punp, sizeof(PunchPacket));
-				buffer[sizeof(PunchPacket)] = '\0';
-				sendto(server_socket, buffer, sizeof(PunchPacket), 0, (struct sockaddr*)&punch_addr, sizeof(punch_addr));
-				printf("Sent a punch command to %s:%d\n", inet_ntoa(punch_addr.sin_addr), ntohs(punch_addr.sin_port));
+				peep = find_peer(conp.to);
+				//punp = get_punch(client_addr);
+				//struct sockaddr_in punch_addr = get_sock_addr(peep.destination);
+				//memcpy(buffer, &punp, sizeof(PunchPacket));
+				//buffer[sizeof(PunchPacket)] = '\0';
+				//sendto(server_socket, buffer, sizeof(PunchPacket), 0, (struct sockaddr*)&punch_addr, sizeof(punch_addr));
+				//printf("Sent a punch command to %s:%d\n", inet_ntoa(punch_addr.sin_addr), ntohs(punch_addr.sin_port));
 				memcpy(buffer, &peep, sizeof(PeerPacket));
 				buffer[sizeof(PeerPacket)] = '\0';
 				sendto(server_socket, buffer, sizeof(PeerPacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
 				break;
-			default: break;
+			case MESSAGE_PACKET:
+				Message msg = { 0 };
+				memcpy(&msg, buffer, sizeof(Message));
+				peep = find_peer(msg.to);
+				if (peep.destination.port != 0) {
+					struct sockaddr_in forward_addr = get_sock_addr(peep.destination);
+					sendto(server_socket, buffer, sizeof(Message), 0, (struct sockaddr*)&forward_addr, sizeof(forward_addr));
+					printf("Forwarded message to ID#%" PRIx64 "%" PRIx64 "\n", msg.to.first, msg.to.second);
+				} else {
+					printf("Unable to forward message to ID#%" PRIx64 "%" PRIx64 "\n", msg.to.first, msg.to.second);
+				}
+			case ACK_PACKET:
+				printf("TODO");
+				break;
+			default:
+				printf("An unknown packet type was recieved\n");
+				break;
 		}
 	}
 
