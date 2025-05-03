@@ -204,11 +204,11 @@ int main(int argc, const char** argv) {
 		RegisterPacket regp;
 		ConnectPacket conp;
 		PeerPacket peep;
-		//PunchPacket punp;
+		PunchPacket punp;
 		AckPacket ack = { 0 };
 		Message msg = { 0 };
 		ack.type = ACK_PACKET;
-		//punp.type = PUNCH_PACKET;
+		punp.type = PUNCH_PACKET;
 		memcpy(&packtype, buffer, sizeof(Header));
 		switch (packtype) {
 			case REGISTER_PACKET:
@@ -223,14 +223,14 @@ int main(int argc, const char** argv) {
 			case CONNECT_PACKET:
 				memcpy(&conp, buffer, sizeof(ConnectPacket));
 				peep = find_peer(conp.to);
-				if (peep.destination.port != 0)
-					peep.destination = server_destination;
-				//punp = get_punch(client_addr);
-				//struct sockaddr_in punch_addr = get_sock_addr(peep.destination);
-				//memcpy(buffer, &punp, sizeof(PunchPacket));
-				//buffer[sizeof(PunchPacket)] = '\0';
-				//sendto(server_socket, buffer, sizeof(PunchPacket), 0, (struct sockaddr*)&punch_addr, sizeof(punch_addr));
-				//printf("Sent a punch command to %s:%d\n", inet_ntoa(punch_addr.sin_addr), ntohs(punch_addr.sin_port));
+				// if (peep.destination.port != 0)
+				// 	peep.destination = server_destination;
+				punp = get_punch(client_addr);
+				struct sockaddr_in punch_addr = get_sock_addr(peep.destination);
+				memcpy(buffer, &punp, sizeof(PunchPacket));
+				buffer[sizeof(PunchPacket)] = '\0';
+				sendto(server_socket, buffer, sizeof(PunchPacket), 0, (struct sockaddr*)&punch_addr, sizeof(punch_addr));
+				printf("Sent a punch command to %s:%d\n", inet_ntoa(punch_addr.sin_addr), ntohs(punch_addr.sin_port));
 				memcpy(buffer, &peep, sizeof(PeerPacket));
 				buffer[sizeof(PeerPacket)] = '\0';
 				sendto(server_socket, buffer, sizeof(PeerPacket), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
